@@ -23,6 +23,8 @@
       --ground2:#a98563;
       --sky1:#d8f3ff;
       --sky2:#bfe7f8;
+      --danger:#d9534f;
+      --success:#1f9d6b;
     }
 
     *{box-sizing:border-box}
@@ -165,6 +167,12 @@
       gap:10px;
     }
 
+    .input-row.accessory-row{
+      grid-template-columns: 1fr 78px 44px;
+      gap:8px;
+      align-items:center;
+    }
+
     input, select, button{
       border:none;
       outline:none;
@@ -187,7 +195,7 @@
       box-shadow:0 0 0 4px rgba(80,190,235,.14);
     }
 
-    .material-chip{
+    .material-chip, .minor-chip{
       margin-top:10px;
       background:#edf9ff;
       border:1px solid #cfeefe;
@@ -199,11 +207,49 @@
       line-height:1.45;
     }
 
-    .button-row{
+    .toggle-wrap{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      background:#eef9ff;
+      border:1px solid #cfeefe;
+      border-radius:18px;
+      padding:12px 14px;
+    }
+
+    .toggle-wrap label{
+      font-weight:900;
+      color:#145d8d;
+      font-size:.97rem;
+    }
+
+    .toggle-wrap input[type="checkbox"]{
+      width:20px;
+      height:20px;
+      accent-color:#1596c7;
+      cursor:pointer;
+      box-shadow:none;
+    }
+
+    .minor-box{
+      display:none;
+      margin-top:12px;
+      padding:12px;
+      border-radius:18px;
+      background:#f7fcff;
+      border:1px solid #d4eef8;
+    }
+
+    .minor-box.active{
+      display:block;
+    }
+
+    .minor-actions{
       display:grid;
       grid-template-columns:1fr 1fr;
       gap:10px;
-      margin-top:18px;
+      margin-top:10px;
     }
 
     .btn{
@@ -226,7 +272,46 @@
       border:2px solid #c9ebf8;
     }
 
+    .btn.small{
+      padding:10px 12px;
+      font-size:.9rem;
+      border-radius:14px;
+    }
+
+    .btn.danger{
+      background:#fff1f1;
+      color:#a54242;
+      border:2px solid #f3caca;
+    }
+
+    .btn.success{
+      background:linear-gradient(135deg, #14805c, #25b07d);
+      color:#fff;
+      box-shadow:0 8px 16px rgba(31,157,107,.18);
+    }
+
     .btn:hover{transform:translateY(-1px)}
+
+    .accessory-list{
+      display:grid;
+      gap:10px;
+      margin-top:12px;
+    }
+
+    .accessory-item{
+      background:#ffffff;
+      border:1px solid #d8eef8;
+      border-radius:18px;
+      padding:10px;
+      box-shadow:0 4px 10px rgba(12,92,138,.05);
+    }
+
+    .accessory-meta{
+      margin-top:8px;
+      color:#5d7a8d;
+      font-size:.88rem;
+      font-weight:800;
+    }
 
     .center-panel{
       padding:14px;
@@ -292,6 +377,14 @@
     .result.highlight{
       background:linear-gradient(135deg, #e4fbff, #f2fbff);
       border:2px solid #aae5f8;
+    }
+
+    .result.minor-only{
+      display:none;
+    }
+
+    .result.minor-only.active{
+      display:block;
     }
 
     details.formulas{
@@ -371,7 +464,7 @@
     <section class="hero">
       <div>
         <h1>Simulador de Bombeo desde Cisterna hacia Tanque</h1>
-        <p>Caudal, diámetro interno, longitud, elevación, material, propiedades del agua y eficiencia de bomba.</p>
+        <p>Caudal, diámetro interno, longitud, elevación, material, propiedades del agua, pérdidas menores y eficiencia de bomba.</p>
       </div>
     </section>
 
@@ -474,6 +567,28 @@
             </div>
           </div>
 
+          <div class="section">
+            <div class="section-title">Pérdidas menores</div>
+
+            <div class="toggle-wrap">
+              <label for="enableMinorLosses">Incluir pérdidas menores</label>
+              <input id="enableMinorLosses" type="checkbox">
+            </div>
+
+            <div class="minor-box" id="minorBox">
+              <div class="minor-chip" id="minorModeInfo">
+                Desactivado.
+              </div>
+
+              <div class="minor-actions">
+                <button class="btn success small" id="btnAddAccessory" type="button">Agregar accesorio</button>
+                <button class="btn danger small" id="btnClearAccessories" type="button">Limpiar</button>
+              </div>
+
+              <div class="accessory-list" id="accessoryList"></div>
+            </div>
+          </div>
+
           <div class="button-row">
             <button class="btn primary" id="btnSample">Cargar base</button>
             <button class="btn secondary" id="btnReset">Restablecer</button>
@@ -538,7 +653,6 @@
               <rect x="205" y="415" width="40" height="55" fill="#3f474d" opacity=".25"/>
             </g>
 
-            <!-- torre pegada a la casa -->
             <g id="tower" filter="url(#shadow)">
               <line id="leg1" x1="460" y1="205" x2="460" y2="380" stroke="#4c565d" stroke-width="8"/>
               <line id="leg2" x1="610" y1="205" x2="610" y2="380" stroke="#4c565d" stroke-width="8"/>
@@ -690,11 +804,13 @@
             <div class="eq">V = Q / A</div>
             <div class="eq">Nr = (ρVD) / μ</div>
             <div class="eq">f = 0.25 / [log10((ε/3.7D) + (5.74/Nr^0.9))]²</div>
-            <div class="eq">HL = f (L/D) (V² / 2g)</div>
-            <div class="eq">HA = Δz + HL</div>
-            <div class="eq">P<sub>hid</sub> = γHAQ = ρgHAQ</div>
+            <div class="eq">HL<sub>fricción</sub> = f (L/D) (V² / 2g)</div>
+            <div class="eq">K = (L<sub>e</sub>/D) f<sub>t</sub></div>
+            <div class="eq">hL<sub>menor</sub> = K (V² / 2g)</div>
+            <div class="eq">HA = Δz + HL<sub>fricción</sub> + hL<sub>menor,total</sub></div>
+            <div class="eq">P<sub>hid</sub> = ρgHAQ</div>
             <div class="eq">P<sub>req</sub> = P<sub>hid</sub> / η</div>
-            <div class="small-note">Para flujo laminar: f = 64/Nr.</div>
+            <div class="small-note">Para flujo laminar: f = 64/Nr. En pérdidas menores, para acero comercial se usa f<sub>t</sub> según tabla 10.5; en otros materiales se usa el factor de fricción calculado arriba.</div>
           </div>
         </details>
       </div>
@@ -726,12 +842,27 @@
             </div>
 
             <div class="result">
-              <div class="name">HL</div>
+              <div class="name">HL fricción</div>
               <div class="value" id="outHL">-</div>
             </div>
 
+            <div class="result minor-only" id="minorResultFtCard">
+              <div class="name">f<sub>t</sub> usado en pérdidas menores</div>
+              <div class="value" id="outFtMinor">-</div>
+            </div>
+
+            <div class="result minor-only" id="minorResultKCard">
+              <div class="name">K total pérdidas menores</div>
+              <div class="value" id="outKMinor">-</div>
+            </div>
+
+            <div class="result minor-only" id="minorResultHLCard">
+              <div class="name">hL pérdidas menores</div>
+              <div class="value" id="outHLMinor">-</div>
+            </div>
+
             <div class="result">
-              <div class="name">HA</div>
+              <div class="name">HA total</div>
               <div class="value" id="outHA">-</div>
             </div>
 
@@ -757,59 +888,64 @@
     </section>
   </div>
 
+  <template id="accessoryTemplate">
+    <div class="accessory-item">
+      <div class="input-row accessory-row">
+        <select class="acc-type"></select>
+        <input class="acc-qty" type="number" min="1" step="1" value="1">
+        <button class="btn danger small acc-remove" type="button">✕</button>
+      </div>
+      <div class="accessory-meta acc-meta">-</div>
+    </div>
+  </template>
+
   <script>
     const g = 9.81;
     const W_PER_HP = 745.699872;
 
+    const minorAccessories = [
+      { key:"globe_open", name:"Válvula de globo — totalmente abierta", mode:"LeD", value:340 },
+      { key:"angle_open", name:"Válvula de ángulo — totalmente abierta", mode:"LeD", value:150 },
+      { key:"gate_open", name:"Válvula de compuerta — totalmente abierta", mode:"LeD", value:8 },
+      { key:"gate_3_4", name:"Válvula de compuerta — abierta 3/4", mode:"LeD", value:35 },
+      { key:"gate_1_2", name:"Válvula de compuerta — abierta 1/2", mode:"LeD", value:160 },
+      { key:"gate_1_4", name:"Válvula de compuerta — abierta 1/4", mode:"LeD", value:900 },
+      { key:"check_swing", name:"Válvula de retención — tipo oscilante", mode:"LeD", value:100 },
+      { key:"check_ball", name:"Válvula de retención — tipo bola", mode:"LeD", value:150 },
+      { key:"butterfly_2_8", name:"Válvula de mariposa — totalmente abierta, 2-8 in", mode:"LeD", value:45 },
+      { key:"butterfly_10_14", name:"Válvula de mariposa — totalmente abierta, 10-14 in", mode:"LeD", value:35 },
+      { key:"butterfly_16_24", name:"Válvula de mariposa — totalmente abierta, 16-24 in", mode:"LeD", value:25 },
+      { key:"foot_stem_disk", name:"Válvula de pie — tipo disco de vástago", mode:"LeD", value:420 },
+      { key:"foot_hinged_disk", name:"Válvula de pie — tipo disco de bisagras", mode:"LeD", value:75 },
+      { key:"elbow90_std", name:"Codo estándar de 90°", mode:"LeD", value:30 },
+      { key:"elbow90_long", name:"Codo de 90° y radio largo", mode:"LeD", value:20 },
+      { key:"elbow90_street", name:"Codo de 90° para calle", mode:"LeD", value:50 },
+      { key:"elbow45_std", name:"Codo estándar de 45°", mode:"LeD", value:16 },
+      { key:"elbow45_street", name:"Codo de 45° para calle", mode:"LeD", value:26 },
+      { key:"return_bend_closed", name:"Doblez de retorno cerrado", mode:"LeD", value:50 },
+      { key:"tee_main", name:"Te estándar — con flujo por la línea principal", mode:"LeD", value:20 },
+      { key:"tee_branch", name:"Te estándar — con flujo por la ramificación", mode:"LeD", value:60 },
+
+      { key:"entry_projecting", name:"Entrada — tubería que se proyecta hacia adentro", mode:"K", value:1.0 },
+      { key:"entry_sharp", name:"Entrada — bordes afilados", mode:"K", value:0.5 },
+      { key:"entry_chamfered", name:"Entrada — achaflanada", mode:"K", value:0.25 },
+      { key:"entry_rounded_0", name:"Entrada redondeada — r/D = 0", mode:"K", value:0.50 },
+      { key:"entry_rounded_002", name:"Entrada redondeada — r/D = 0.02", mode:"K", value:0.28 },
+      { key:"entry_rounded_004", name:"Entrada redondeada — r/D = 0.04", mode:"K", value:0.24 },
+      { key:"entry_rounded_006", name:"Entrada redondeada — r/D = 0.06", mode:"K", value:0.15 },
+      { key:"entry_rounded_010", name:"Entrada redondeada — r/D = 0.10", mode:"K", value:0.09 },
+      { key:"entry_rounded_gt015", name:"Entrada redondeada — r/D > 0.15", mode:"K", value:0.04 }
+    ];
+
     const materials = {
-      pvc_new: {
-        name: "PVC (nuevo)",
-        eps: 1.5e-6,
-        pipeColor: "#2f6df6",
-        pipeGlow: "#84c5ff"
-      },
-      pvc_used: {
-        name: "PVC (usado)",
-        eps: 7e-6,
-        pipeColor: "#3f7cff",
-        pipeGlow: "#a2ceff"
-      },
-      copper: {
-        name: "Cobre",
-        eps: 1.5e-6,
-        pipeColor: "#c47a3a",
-        pipeGlow: "#e3b184"
-      },
-      steel_commercial: {
-        name: "Acero comercial",
-        eps: 4.6e-5,
-        pipeColor: "#7b8a96",
-        pipeGlow: "#b7c2ca"
-      },
-      steel_galvanized: {
-        name: "Acero galvanizado",
-        eps: 1.5e-4,
-        pipeColor: "#8e989f",
-        pipeGlow: "#cad2d7"
-      },
-      cast_iron: {
-        name: "Hierro fundido",
-        eps: 2.6e-4,
-        pipeColor: "#5d646b",
-        pipeGlow: "#9fa6ad"
-      },
-      concrete_smooth: {
-        name: "Concreto liso",
-        eps: 3e-4,
-        pipeColor: "#8f9288",
-        pipeGlow: "#c0c2b7"
-      },
-      concrete_rough: {
-        name: "Concreto rugoso",
-        eps: 3e-3,
-        pipeColor: "#7a7568",
-        pipeGlow: "#b8b29f"
-      }
+      pvc_new: { name:"PVC (nuevo)", eps:1.5e-6, pipeColor:"#2f6df6", pipeGlow:"#84c5ff" },
+      pvc_used: { name:"PVC (usado)", eps:7e-6, pipeColor:"#3f7cff", pipeGlow:"#a2ceff" },
+      copper: { name:"Cobre", eps:1.5e-6, pipeColor:"#c47a3a", pipeGlow:"#e3b184" },
+      steel_commercial: { name:"Acero comercial", eps:4.6e-5, pipeColor:"#7b8a96", pipeGlow:"#b7c2ca" },
+      steel_galvanized: { name:"Acero galvanizado", eps:1.5e-4, pipeColor:"#8e989f", pipeGlow:"#cad2d7" },
+      cast_iron: { name:"Hierro fundido", eps:2.6e-4, pipeColor:"#5d646b", pipeGlow:"#9fa6ad" },
+      concrete_smooth: { name:"Concreto liso", eps:3e-4, pipeColor:"#8f9288", pipeGlow:"#c0c2b7" },
+      concrete_rough: { name:"Concreto rugoso", eps:3e-3, pipeColor:"#7a7568", pipeGlow:"#b8b29f" }
     };
 
     const $ = id => document.getElementById(id);
@@ -829,7 +965,14 @@
       efficiency: $("efficiency"),
       materialInfo: $("materialInfo"),
       btnSample: $("btnSample"),
-      btnReset: $("btnReset")
+      btnReset: $("btnReset"),
+      enableMinorLosses: $("enableMinorLosses"),
+      minorBox: $("minorBox"),
+      minorModeInfo: $("minorModeInfo"),
+      accessoryList: $("accessoryList"),
+      btnAddAccessory: $("btnAddAccessory"),
+      btnClearAccessories: $("btnClearAccessories"),
+      accessoryTemplate: $("accessoryTemplate")
     };
 
     const outputs = {
@@ -843,7 +986,13 @@
       outPhHp: $("outPhHp"),
       outPreq: $("outPreq"),
       outPreqHp: $("outPreqHp"),
-      outEps: $("outEps")
+      outEps: $("outEps"),
+      outFtMinor: $("outFtMinor"),
+      outKMinor: $("outKMinor"),
+      outHLMinor: $("outHLMinor"),
+      minorResultFtCard: $("minorResultFtCard"),
+      minorResultKCard: $("minorResultKCard"),
+      minorResultHLCard: $("minorResultHLCard")
     };
 
     const diagram = {
@@ -896,6 +1045,10 @@
       }
     }
 
+    function toInches(value, unit){
+      return toMeters(value, unit) / 0.0254;
+    }
+
     function trimZeros(str){
       return str.replace(/(\.\d*?[1-9])0+$/,"$1").replace(/\.0+$/,"");
     }
@@ -930,6 +1083,177 @@
       return Math.max(min, Math.min(max, v));
     }
 
+    function getSteelFtFromInches(dIn){
+      if (dIn <= 0.5) return 0.026;
+      if (dIn <= 0.75) return 0.024;
+      if (dIn <= 1.0) return 0.022;
+      if (dIn <= 1.25) return 0.021;
+      if (dIn <= 1.5) return 0.020;
+      if (dIn <= 2.0) return 0.019;
+      if (dIn <= 2.5) return 0.018;
+      if (dIn <= 3.5) return 0.017;
+      if (dIn <= 4.0) return 0.016;
+      if (dIn <= 6.0) return 0.015;
+      if (dIn <= 8.0) return 0.014;
+      if (dIn <= 14.0) return 0.013;
+      if (dIn <= 22.0) return 0.012;
+      return 0.011;
+    }
+
+    function getMinorFt(materialKey, dIn, f){
+      if(materialKey === "steel_commercial"){
+        return getSteelFtFromInches(dIn);
+      }
+      return f;
+    }
+
+    function populateAccessorySelect(selectEl){
+      selectEl.innerHTML = "";
+      minorAccessories.forEach(acc=>{
+        const opt = document.createElement("option");
+        opt.value = acc.key;
+        opt.textContent = acc.name;
+        selectEl.appendChild(opt);
+      });
+    }
+
+    function getAccessoryByKey(key){
+      return minorAccessories.find(a => a.key === key);
+    }
+
+    function updateMinorVisibility(){
+      const active = inputs.enableMinorLosses.checked;
+      inputs.minorBox.classList.toggle("active", active);
+      [
+        outputs.minorResultFtCard,
+        outputs.minorResultKCard,
+        outputs.minorResultHLCard
+      ].forEach(card => card.classList.toggle("active", active));
+      updateMinorInfoText();
+    }
+
+    function updateMinorInfoText(){
+      if(!inputs.enableMinorLosses.checked){
+        inputs.minorModeInfo.innerHTML = "Desactivado.";
+        return;
+      }
+      const count = inputs.accessoryList.children.length;
+      if(count === 0){
+        inputs.minorModeInfo.innerHTML = "Activado. Agrega uno o varios accesorios o entradas especiales.";
+      }else{
+        inputs.minorModeInfo.innerHTML = `Activado. Accesorios agregados: <strong>${count}</strong>.`;
+      }
+    }
+
+    function addAccessoryRow(defaultKey = "elbow90_std", qty = 1){
+      const node = inputs.accessoryTemplate.content.firstElementChild.cloneNode(true);
+      const select = node.querySelector(".acc-type");
+      const qtyInput = node.querySelector(".acc-qty");
+      const removeBtn = node.querySelector(".acc-remove");
+
+      populateAccessorySelect(select);
+      select.value = defaultKey;
+      qtyInput.value = qty;
+
+      select.addEventListener("change", ()=>{
+        updateAccessoryMeta(node);
+        compute();
+      });
+      qtyInput.addEventListener("input", ()=>{
+        updateAccessoryMeta(node);
+        compute();
+      });
+      removeBtn.addEventListener("click", ()=>{
+        node.remove();
+        updateMinorInfoText();
+        compute();
+      });
+
+      inputs.accessoryList.appendChild(node);
+      updateAccessoryMeta(node);
+      updateMinorInfoText();
+    }
+
+    function updateAccessoryMeta(node){
+      const select = node.querySelector(".acc-type");
+      const qtyInput = node.querySelector(".acc-qty");
+      const meta = node.querySelector(".acc-meta");
+      const acc = getAccessoryByKey(select.value);
+      const qty = Math.max(1, parseInt(qtyInput.value || "1", 10));
+
+      if(!acc){
+        meta.textContent = "-";
+        return;
+      }
+
+      if(acc.mode === "LeD"){
+        meta.innerHTML = `Tipo: Le/D · Valor: <strong>${acc.value}</strong> · Cantidad: <strong>${qty}</strong>`;
+      }else{
+        meta.innerHTML = `Tipo: K directo · Valor: <strong>${trimZeros(acc.value.toFixed(2))}</strong> · Cantidad: <strong>${qty}</strong>`;
+      }
+    }
+
+    function clearAccessories(){
+      inputs.accessoryList.innerHTML = "";
+      updateMinorInfoText();
+      compute();
+    }
+
+    function getMinorLossSummary(D, V, f, materialKey){
+      if(!inputs.enableMinorLosses.checked){
+        return {
+          enabled:false,
+          ftMinor:0,
+          kTotal:0,
+          hLMinor:0,
+          items:[]
+        };
+      }
+
+      const dIn = D / 0.0254;
+      const ftMinor = getMinorFt(materialKey, dIn, f);
+      let kTotal = 0;
+      const items = [];
+
+      [...inputs.accessoryList.children].forEach(node=>{
+        const select = node.querySelector(".acc-type");
+        const qtyInput = node.querySelector(".acc-qty");
+        const acc = getAccessoryByKey(select.value);
+        const qty = Math.max(1, parseInt(qtyInput.value || "1", 10));
+
+        if(!acc) return;
+
+        let kUnit = 0;
+        if(acc.mode === "LeD"){
+          kUnit = acc.value * ftMinor;
+        }else{
+          kUnit = acc.value;
+        }
+
+        const kItem = kUnit * qty;
+        kTotal += kItem;
+
+        items.push({
+          name: acc.name,
+          qty,
+          kUnit,
+          kItem,
+          mode: acc.mode,
+          refValue: acc.value
+        });
+      });
+
+      const hLMinor = kTotal * (V * V / (2 * g));
+
+      return {
+        enabled:true,
+        ftMinor,
+        kTotal,
+        hLMinor,
+        items
+      };
+    }
+
     function compute(){
       const Qinput = Math.max(0, num(inputs.flowValue));
       const Dinput = Math.max(0, num(inputs.diameterValue));
@@ -952,6 +1276,9 @@
       let Re = 0;
       let f = 0;
       let HL = 0;
+      let hLMinor = 0;
+      let kMinor = 0;
+      let ftMinor = 0;
       let HA = 0;
       let gamma = rho * g;
       let Ph = 0;
@@ -982,7 +1309,12 @@
         HL = f * (L / D) * (V * V / (2 * g));
       }
 
-      HA = dz + HL;
+      const minorSummary = getMinorLossSummary(D, V, f, inputs.material.value);
+      hLMinor = minorSummary.hLMinor;
+      kMinor = minorSummary.kTotal;
+      ftMinor = minorSummary.ftMinor;
+
+      HA = dz + HL + hLMinor;
       Ph = gamma * HA * Q;
       Preq = Ph / eta;
 
@@ -992,7 +1324,11 @@
         A, V, Re, f, HL, HA, gamma, Ph, Preq,
         materialName: mat.name,
         pipeColor: mat.pipeColor,
-        pipeGlow: mat.pipeGlow
+        pipeGlow: mat.pipeGlow,
+        minorEnabled: minorSummary.enabled,
+        ftMinor,
+        kMinor,
+        hLMinor
       });
     }
 
@@ -1014,6 +1350,16 @@
       outputs.outPreqHp.innerHTML = fmt(data.Preq / W_PER_HP, "HP", 4);
       outputs.outEps.innerHTML = sciHTML(data.eps, 4, "m");
 
+      if(data.minorEnabled){
+        outputs.outFtMinor.innerHTML = fmt(data.ftMinor, "", 5);
+        outputs.outKMinor.innerHTML = fmt(data.kMinor, "", 4);
+        outputs.outHLMinor.innerHTML = fmt(data.hLMinor, "m", 4);
+      }else{
+        outputs.outFtMinor.innerHTML = "-";
+        outputs.outKMinor.innerHTML = "-";
+        outputs.outHLMinor.innerHTML = "-";
+      }
+
       diagram.lengthLabel.textContent = `L = ${trimZeros(data.L.toFixed(2))} m`;
       diagram.diamLabel.textContent = `D = ${trimZeros(data.D.toFixed(4))} m`;
       diagram.flowLabel.textContent = `Q = ${trimZeros(data.Qinput.toFixed(2))} ${inputs.flowUnit.value}`;
@@ -1024,6 +1370,7 @@
       document.documentElement.style.setProperty("--pipeGlow", data.pipeGlow);
 
       updateDiagram(data);
+      updateMinorVisibility();
     }
 
     function updateDiagram(data){
@@ -1105,6 +1452,8 @@
       inputs.density.value = 1000;
       inputs.viscosity.value = 0.001;
       inputs.efficiency.value = 60;
+      inputs.enableMinorLosses.checked = false;
+      clearAccessories();
       compute();
     }
 
@@ -1123,10 +1472,22 @@
       el.addEventListener("change", compute);
     });
 
+    inputs.enableMinorLosses.addEventListener("change", ()=>{
+      updateMinorVisibility();
+      compute();
+    });
+
+    inputs.btnAddAccessory.addEventListener("click", ()=>{
+      addAccessoryRow();
+      compute();
+    });
+
+    inputs.btnClearAccessories.addEventListener("click", clearAccessories);
+
     inputs.btnSample.addEventListener("click", loadBase);
     inputs.btnReset.addEventListener("click", resetAll);
 
-    compute();
+    loadBase();
   </script>
 </body>
 </html>
