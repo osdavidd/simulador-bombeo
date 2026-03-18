@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simulador de Bombeo desde Cisterna hacia Tanque</title>
+  <style>
+    :root{
+      --bg1:#dff6ff;
+      --bg2:#c9eefb;
+      --panel:#ffffffde;
+      --primary:#0c5c8a;
+      --primary-dark:#083f60;
+      --accent:#23a6d5;
+      --line:#cfeaf6;
+      --text:#16384b;
+      --muted:#617f91;
+      --shadow:0 12px 28px rgba(12,92,138,.12);
+      --radius:24px;
+      --pipeColor:#2f6df6;
+      --pipeGlow:#85c7ff;
+      --ground1:#c3b39a;
+      --ground2:#a98563;
+      --sky1:#d8f3ff;
+      --sky2:#bfe7f8;
+      --danger:#d9534f;
+      --success:#1f9d6b;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at top right, rgba(255,255,255,.5), transparent 18%),
+        linear-gradient(180deg, var(--bg1), var(--bg2));
+    }
+
+    .app{
+      width:min(1600px, 96vw);
+      margin:18px auto;
+      display:grid;
+      gap:16px;
+    }
+
+    .hero{
+      background:linear-gradient(135deg, #74d1f3, #4ebbe7 45%, #309ccd 100%);
+      border-radius:34px;
+      padding:24px 30px;
+      box-shadow:var(--shadow);
+      min-height:138px;
+      display:flex;
+      align-items:center;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .hero::after{
+      content:"";
+      position:absolute;
+      right:-40px;
+      top:-55px;
+      width:220px;
+      height:220px;
+      border-radius:50%;
+      background:rgba(255,255,255,.14);
+      filter:blur(2px);
+    }
+
+    .hero h1{
+      margin:0;
+      font-size:clamp(2.1rem, 3.5vw, 4rem);
+      line-height:1.03;
+      font-weight:900;
+      color:#0c2740;
+      max-width:1000px;
+      letter-spacing:.2px;
+    }
+
+    .hero p{
+      margin:12px 0 0;
+      font-size:1rem;
+      color:#12344a;
+      max-width:980px;
+      line-height:1.45;
+    }
+
+    .main{
+      display:grid;
+      grid-template-columns:390px 1fr 360px;
+      gap:16px;
+      align-items:stretch;
+    }
+
+    .panel{
+      background:var(--panel);
+      border:1px solid rgba(255,255,255,.8);
+      backdrop-filter:blur(10px);
+      border-radius:30px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      min-height:100%;
+    }
+
+    .panel-inner{
+      padding:22px;
+    }
+
+    .panel h2{
+      margin:0;
+      font-size:1.6rem;
+      font-weight:900;
+      color:#10496e;
+    }
+
+    .muted{
+      margin:10px 0 0;
+      color:var(--muted);
+      font-size:.98rem;
+      line-height:1.45;
+    }
+
+    .section{
+      margin-top:20px;
+    }
+
+    .section-title{
+      margin:0 0 14px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:900;
+      color:#145d8d;
+      font-size:1.06rem;
+    }
+
+    .section-title::before{
+      content:"";
+      width:12px;
+      height:12px;
+      border-radius:50%;
+      background:linear-gradient(135deg, #35bae7, #73dbff);
+      box-shadow:0 0 0 6px rgba(88,214,255,.15);
+      flex:none;
+    }
+
+    .grid{
+      display:grid;
+      gap:12px;
+    }
+
+    .field{
+      display:grid;
+      gap:7px;
+    }
+
+    .field label{
+      font-size:.98rem;
+      font-weight:800;
+      color:#1a384d;
+    }
+
+    .input-row{
+      display:grid;
+      grid-template-columns:1fr 130px;
+      gap:10px;
+    }
+
+    .input-row.accessory-row{
+      grid-template-columns: 1fr 78px 44px;
+      gap:8px;
+      align-items:center;
+    }
+
+    input, select, button{
+      border:none;
+      outline:none;
+      font:inherit;
+    }
+
+    input, select{
+      width:100%;
+      background:#f8fdff;
+      border:2px solid #cdeaf7;
+      border-radius:18px;
+      padding:14px 16px;
+      color:var(--text);
+      font-weight:700;
+      transition:.16s ease;
+    }
+
+    input:focus, select:focus{
+      border-color:#79d4f6;
+      box-shadow:0 0 0 4px rgba(80,190,235,.14);
+    }
+
+    .material-chip, .minor-chip{
+      margin-top:10px;
+      background:#edf9ff;
+      border:1px solid #cfeefe;
+      border-radius:18px;
+      padding:12px 14px;
+      color:#174561;
+      font-weight:700;
+      font-size:.93rem;
+      line-height:1.45;
+    }
+
+    .toggle-wrap{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      background:#eef9ff;
+      border:1px solid #cfeefe;
+      border-radius:18px;
+      padding:12px 14px;
+    }
+
+    .toggle-wrap label{
+      font-weight:900;
+      color:#145d8d;
+      font-size:.97rem;
+    }
+
+    .toggle-wrap input[type="checkbox"]{
+      width:20px;
+      height:20px;
+      accent-color:#1596c7;
+      cursor:pointer;
+      box-shadow:none;
+    }
+
+    .minor-box{
+      display:none;
+      margin-top:12px;
+      padding:12px;
+      border-radius:18px;
+      background:#f7fcff;
+      border:1px solid #d4eef8;
+    }
+
+    .minor-box.active{
+      display:block;
+    }
+
+    .minor-actions{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+
+    .btn{
+      padding:14px 16px;
+      border-radius:18px;
+      font-weight:900;
+      cursor:pointer;
+      transition:.16s ease;
+    }
+
+    .btn.primary{
+      color:white;
+      background:linear-gradient(135deg, #0f6795, #17a0d0);
+      box-shadow:0 8px 18px rgba(15,103,149,.18);
+    }
+
+    .btn.secondary{
+      color:#115a84;
+      background:#f2fbff;
+      border:2px solid #c9ebf8;
+    }
+
+    .btn.small{
+      padding:10px 12px;
+      font-size:.9rem;
+      border-radius:14px;
+    }
+
+    .btn.danger{
+      background:#fff1f1;
+      color:#a54242;
+      border:2px solid #f3caca;
+    }
+
+    .btn.success{
+      background:linear-gradient(135deg, #14805c, #25b07d);
+      color:#fff;
+      box-shadow:0 8px 16px rgba(31,157,107,.18);
+    }
+
+    .btn:hover{transform:translateY(-1px)}
+
+    .accessory-list{
+      display:grid;
+      gap:10px;
+      margin-top:12px;
+    }
+
+    .accessory-item{
+      background:#ffffff;
+      border:1px solid #d8eef8;
+      border-radius:18px;
+      padding:10px;
+      box-shadow:0 4px 10px rgba(12,92,138,.05);
+    }
+
+    .accessory-meta{
+      margin-top:8px;
+      color:#5d7a8d;
+      font-size:.88rem;
+      font-weight:800;
+    }
+
+    .center-panel{
+      padding:14px;
+      display:grid;
+      grid-template-rows:1fr auto;
+      gap:12px;
+    }
+
+    .diagram-card{
+      position:relative;
+      min-height:640px;
+      border-radius:28px;
+      overflow:hidden;
+      border:1px solid #bfe4f3;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.35), 0 10px 28px rgba(8,63,96,.10);
+      background:linear-gradient(180deg, var(--sky1) 0%, var(--sky2) 49.5%, var(--ground1) 49.5%, var(--ground2) 100%);
+    }
+
+    .diagram-svg{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      display:block;
+    }
+
+    .results{
+      display:grid;
+      gap:12px;
+    }
+
+    .result{
+      background:linear-gradient(180deg, #f8fdff, #eef8fd);
+      border:1px solid #cfe8f4;
+      border-radius:22px;
+      padding:16px 18px;
+      box-shadow:0 8px 18px rgba(12,96,142,.06);
+    }
+
+    .result .name{
+      color:#5e7788;
+      font-size:.94rem;
+      font-weight:800;
+      margin-bottom:6px;
+    }
+
+    .result .value{
+      color:#13496e;
+      font-size:1.32rem;
+      font-weight:900;
+      line-height:1.2;
+      word-break:break-word;
+    }
+
+    .result .subvalue{
+      color:#5b7789;
+      font-size:.98rem;
+      font-weight:800;
+      margin-top:4px;
+      line-height:1.2;
+    }
+
+    .result.highlight{
+      background:linear-gradient(135deg, #e4fbff, #f2fbff);
+      border:2px solid #aae5f8;
+    }
+
+    .result.minor-only{
+      display:none;
+    }
+
+    .result.minor-only.active{
+      display:block;
+    }
+
+    details.formulas{
+      background:rgba(255,255,255,.72);
+      border:1px solid rgba(255,255,255,.85);
+      border-radius:24px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    details.formulas summary{
+      list-style:none;
+      cursor:pointer;
+      padding:16px 22px;
+      font-weight:900;
+      color:#125176;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      user-select:none;
+    }
+
+    details.formulas summary::-webkit-details-marker{
+      display:none;
+    }
+
+    .arrow{
+      width:14px;
+      height:14px;
+      border-right:3px solid #125176;
+      border-bottom:3px solid #125176;
+      transform:rotate(45deg);
+      transition:.2s ease;
+      margin-right:4px;
+    }
+
+    details[open] .arrow{
+      transform:rotate(225deg);
+      margin-top:8px;
+    }
+
+    .formula-body{
+      padding:0 22px 18px;
+      display:grid;
+      gap:10px;
+    }
+
+    .eq{
+      background:#f4fbff;
+      border-left:5px solid #51c2e8;
+      border-radius:14px;
+      padding:10px 12px;
+      color:#164765;
+      font-weight:800;
+      overflow-x:auto;
+    }
+
+    .small-note{
+      color:#5e7788;
+      font-size:.92rem;
+      line-height:1.45;
+      padding-top:4px;
+    }
+
+    @media (max-width:1280px){
+      .main{
+        grid-template-columns:1fr;
+      }
+      .diagram-card{
+        min-height:520px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="hero">
+      <div>
+        <h1>Simulador de Bombeo desde Cisterna hacia Tanque</h1>
+        <p>Caudal, diámetro interno, longitud, elevación, material, propiedades del agua, pérdidas menores y eficiencia de bomba.</p>
+      </div>
+    </section>
+
+    <section class="main">
+      <div class="panel">
+        <div class="panel-inner">
+          <h2>Entradas</h2>
+          <p class="muted">Modifica las variables del sistema con unidades congruentes.</p>
+
+          <div class="section">
+            <div class="section-title">Sistema hidráulico</div>
+            <div class="grid">
+              <div class="field">
+                <label for="flowValue">Caudal Q</label>
+                <div class="input-row">
+                  <input id="flowValue" type="number" step="any" value="30">
+                  <select id="flowUnit">
+                    <option value="L/min">L/min</option>
+                    <option value="gal/min">gal/min</option>
+                    <option value="m3/s">m³/s</option>
+                    <option value="m3/min">m³/min</option>
+                    <option value="ft3/s">ft³/s</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="diameterValue">Diámetro interno D</label>
+                <div class="input-row">
+                  <input id="diameterValue" type="number" step="any" value="1">
+                  <select id="diameterUnit">
+                    <option value="in">pulgadas</option>
+                    <option value="ft">pies</option>
+                    <option value="m">m</option>
+                    <option value="cm">cm</option>
+                    <option value="mm">mm</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="lengthValue">Longitud total L</label>
+                <div class="input-row">
+                  <input id="lengthValue" type="number" step="any" value="25">
+                  <select id="lengthUnit">
+                    <option value="m">m</option>
+                    <option value="ft">ft</option>
+                    <option value="cm">cm</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="elevationValue">Diferencia de elevación Δz</label>
+                <div class="input-row">
+                  <input id="elevationValue" type="number" step="any" value="8">
+                  <select id="elevationUnit">
+                    <option value="m">m</option>
+                    <option value="ft">ft</option>
+                    <option value="cm">cm</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="material">Material de la tubería</label>
+                <select id="material">
+                  <option value="pvc_new">PVC (nuevo)</option>
+                  <option value="pvc_used">PVC (usado)</option>
+                  <option value="copper">Cobre</option>
+                  <option value="steel_commercial">Acero comercial</option>
+                  <option value="steel_galvanized">Acero galvanizado</option>
+                  <option value="cast_iron">Hierro fundido</option>
+                  <option value="concrete_smooth">Concreto liso</option>
+                  <option value="concrete_rough">Concreto rugoso</option>
+                </select>
+              </div>
+
+              <div class="material-chip" id="materialInfo"></div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Propiedades del agua</div>
+            <div class="grid">
+              <div class="field">
+                <label for="density">Densidad ρ (kg/m³)</label>
+                <input id="density" type="number" step="any" value="1000">
+              </div>
+
+              <div class="field">
+                <label for="viscosity">Viscosidad dinámica μ (Pa·s)</label>
+                <input id="viscosity" type="number" step="any" value="0.001">
+              </div>
+
+              <div class="field">
+                <label for="efficiency">Eficiencia de la bomba η (%)</label>
+                <input id="efficiency" type="number" step="any" value="60">
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Pérdidas menores</div>
+
+            <div class="toggle-wrap">
+              <label for="enableMinorLosses">Incluir pérdidas menores</label>
+              <input id="enableMinorLosses" type="checkbox">
+            </div>
+
+            <div class="minor-box" id="minorBox">
+              <div class="minor-chip" id="minorModeInfo">
+                Desactivado.
+              </div>
+
+              <div class="minor-actions">
+                <button class="btn success small" id="btnAddAccessory" type="button">Agregar accesorio</button>
+                <button class="btn danger small" id="btnClearAccessories" type="button">Limpiar</button>
+              </div>
+
+              <div class="accessory-list" id="accessoryList"></div>
+            </div>
+          </div>
+
+          <div class="button-row">
+            <button class="btn primary" id="btnSample">Cargar base</button>
+            <button class="btn secondary" id="btnReset">Restablecer</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel center-panel">
+        <div class="diagram-card">
+          <svg class="diagram-svg" viewBox="0 0 1000 760" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <linearGradient id="skyGrad" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#d9f4ff"/>
+                <stop offset="100%" stop-color="#c1e8f8"/>
+              </linearGradient>
+              <linearGradient id="soilGrad" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#c6b59a"/>
+                <stop offset="100%" stop-color="#a98762"/>
+              </linearGradient>
+              <linearGradient id="houseGrad" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#efe9dd"/>
+                <stop offset="100%" stop-color="#ddd5c6"/>
+              </linearGradient>
+              <linearGradient id="waterGrad" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#9ce4ff"/>
+                <stop offset="100%" stop-color="#5ebfe7"/>
+              </linearGradient>
+              <linearGradient id="tankMetal" x1="0" x2="1" y1="0" y2="1">
+                <stop offset="0%" stop-color="#97a8b0"/>
+                <stop offset="100%" stop-color="#667983"/>
+              </linearGradient>
+              <filter id="shadow" x="-20%" y="-20%" width="160%" height="160%">
+                <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0c4463" flood-opacity=".15"/>
+              </filter>
+              <filter id="pipeShadow" x="-20%" y="-20%" width="160%" height="160%">
+                <feDropShadow dx="0" dy="0" stdDeviation="3.5" flood-color="var(--pipeGlow)" flood-opacity=".95"/>
+              </filter>
+              <filter id="labelShadow" x="-20%" y="-20%" width="160%" height="160%">
+                <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity=".35"/>
+              </filter>
+            </defs>
+
+            <rect x="0" y="0" width="1000" height="380" fill="url(#skyGrad)"/>
+            <rect x="0" y="380" width="1000" height="380" fill="url(#soilGrad)"/>
+
+            <polygon points="835,380 1000,330 1000,760 870,760" fill="#d0d3d6" opacity=".7"/>
+            <polygon points="860,380 1000,338 1000,760 895,760" fill="#e6e9eb" opacity=".65"/>
+
+            <line x1="0" y1="380" x2="1000" y2="380" stroke="#6f593e" stroke-width="5"/>
+            <line x1="0" y1="385" x2="1000" y2="385" stroke="#9f815d" stroke-width="2"/>
+
+            <g filter="url(#shadow)">
+              <rect x="70" y="190" width="320" height="190" fill="url(#houseGrad)" stroke="#58636d" stroke-width="3"/>
+              <polygon points="40,195 215,90 415,195" fill="#7b5d49" stroke="#5a4638" stroke-width="3"/>
+              <line x1="90" y1="225" x2="370" y2="225" stroke="#b7a995" stroke-width="2"/>
+              <line x1="90" y1="255" x2="370" y2="255" stroke="#b7a995" stroke-width="2"/>
+              <line x1="90" y1="285" x2="370" y2="285" stroke="#b7a995" stroke-width="2"/>
+              <line x1="90" y1="315" x2="370" y2="315" stroke="#b7a995" stroke-width="2"/>
+              <rect x="115" y="275" width="60" height="105" fill="#6a7882" stroke="#45515b" stroke-width="3"/>
+              <rect x="220" y="232" width="52" height="40" fill="#caddea" stroke="#53616b" stroke-width="2.5"/>
+              <rect x="295" y="232" width="52" height="40" fill="#caddea" stroke="#53616b" stroke-width="2.5"/>
+              <rect x="205" y="415" width="40" height="55" fill="#3f474d" opacity=".25"/>
+            </g>
+
+            <g id="tower" filter="url(#shadow)">
+              <line id="leg1" x1="460" y1="205" x2="460" y2="380" stroke="#4c565d" stroke-width="8"/>
+              <line id="leg2" x1="610" y1="205" x2="610" y2="380" stroke="#4c565d" stroke-width="8"/>
+              <line id="bar1" x1="460" y1="205" x2="610" y2="205" stroke="#4c565d" stroke-width="8"/>
+              <line id="bar2" x1="460" y1="380" x2="610" y2="380" stroke="#4c565d" stroke-width="8"/>
+              <line id="cross1" x1="460" y1="205" x2="610" y2="380" stroke="#6d7880" stroke-width="4"/>
+              <line id="cross2" x1="610" y1="205" x2="460" y2="380" stroke="#6d7880" stroke-width="4"/>
+              <line x1="460" y1="292" x2="610" y2="292" stroke="#6d7880" stroke-width="4"/>
+            </g>
+
+            <g id="tankAll" filter="url(#shadow)">
+              <rect id="tankBody" x="430" y="120" width="210" height="95" rx="24" fill="url(#tankMetal)" stroke="#30414b" stroke-width="4"/>
+              <rect id="tankWater" x="455" y="146" width="160" height="46" rx="15" fill="url(#waterGrad)" opacity=".92"/>
+              <ellipse id="tankTop" cx="535" cy="120" rx="78" ry="12" fill="#a7b7be" stroke="#30414b" stroke-width="4"/>
+              <rect x="510" y="90" width="50" height="24" rx="7" fill="#93a4ac" stroke="#30414b" stroke-width="3"/>
+            </g>
+
+            <g filter="url(#shadow)">
+              <rect x="40" y="470" width="300" height="210" fill="#9aa4aa" stroke="#223846" stroke-width="4"/>
+              <rect x="58" y="525" width="264" height="137" fill="url(#waterGrad)" opacity=".95"/>
+              <text x="75" y="655" font-size="28" font-weight="900" fill="#ffffff" filter="url(#labelShadow)">Cisterna</text>
+            </g>
+
+            <g filter="url(#shadow)">
+              <ellipse cx="215" cy="603" rx="38" ry="18" fill="#4d5f6b" opacity=".45"/>
+              <rect x="195" y="542" width="42" height="78" rx="16" fill="#9eabb1" stroke="#253947" stroke-width="4"/>
+              <rect x="186" y="612" width="60" height="42" rx="8" fill="#89979f" stroke="#253947" stroke-width="4"/>
+              <line x1="196" y1="630" x2="236" y2="630" stroke="#6e7b83" stroke-width="4"/>
+              <line x1="196" y1="640" x2="236" y2="640" stroke="#6e7b83" stroke-width="4"/>
+              <text x="140" y="560" font-size="28" font-weight="900" fill="#ffffff" filter="url(#labelShadow)">Bomba</text>
+            </g>
+
+            <g filter="url(#pipeShadow)">
+              <path id="pipeMain"
+                    d="M 220 542
+                       L 220 488
+                       L 220 448
+                       L 220 430
+                       L 265 430
+                       L 280 430
+                       L 460 430
+                       L 460 250
+                       L 455 250"
+                    fill="none"
+                    stroke="var(--pipeColor)"
+                    stroke-width="12"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"/>
+            </g>
+
+            <path id="pipeGlowPath"
+                  d="M 220 542
+                     L 220 488
+                     L 220 448
+                     L 220 430
+                     L 265 430
+                     L 280 430
+                     L 460 430
+                     L 460 250
+                     L 455 250"
+                  fill="none"
+                  stroke="var(--pipeGlow)"
+                  stroke-width="4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  opacity=".78"/>
+
+            <g filter="url(#pipeShadow)">
+              <path id="pipeTank"
+                    d="M 455 250
+                       L 455 205
+                       L 430 205"
+                    fill="none"
+                    stroke="var(--pipeColor)"
+                    stroke-width="12"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"/>
+            </g>
+
+            <path id="pipeTankGlow"
+                  d="M 455 250
+                     L 455 205
+                     L 430 205"
+                  fill="none"
+                  stroke="var(--pipeGlow)"
+                  stroke-width="4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  opacity=".78"/>
+
+            <g filter="url(#shadow)" opacity=".9">
+              <path d="M 460 430 L 905 430 L 905 398" fill="none" stroke="#e6e7e8" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M 460 430 L 905 430 L 905 398" fill="none" stroke="#9b9c9e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+
+            <g filter="url(#shadow)" opacity=".95">
+              <path d="M 155 470 L 155 438" fill="none" stroke="#e6e7e8" stroke-width="18" stroke-linecap="round"/>
+              <path d="M 155 470 L 155 438" fill="none" stroke="#9b9c9e" stroke-width="3" stroke-linecap="round"/>
+            </g>
+
+            <g fill="#111" opacity=".8">
+              <polygon points="335,420 351,430 335,440"/>
+              <polygon points="448,308 460,294 472,308"/>
+              <polygon points="395,420 411,430 395,440"/>
+            </g>
+
+            <g font-weight="900" filter="url(#labelShadow)">
+              <text x="380" y="265" font-size="28" fill="#ffffff">Abierto al aire</text>
+              <line x1="460" y1="270" x2="485" y2="234" stroke="#ffffff" stroke-width="2.5"/>
+              <text x="635" y="178" font-size="30" fill="#ffffff">Tanque</text>
+              <text x="305" y="408" font-size="24" fill="#111">Flujo</text>
+            </g>
+
+            <g fill="#ffffff" font-weight="900" filter="url(#labelShadow)">
+              <line x1="315" y1="515" x2="830" y2="515" stroke="#ffffff" stroke-width="3.5"/>
+              <polygon points="323,509 307,515 323,521" fill="#ffffff"/>
+              <polygon points="822,509 838,515 822,521" fill="#ffffff"/>
+              <text id="lengthLabel" x="487" y="500" font-size="30">L = 25.00 m</text>
+            </g>
+
+            <g fill="#ffffff" font-weight="900" filter="url(#labelShadow)">
+              <text id="diamLabel" x="520" y="563" font-size="30">D = 0.0254 m</text>
+            </g>
+
+            <g fill="#ffffff" font-weight="900" filter="url(#labelShadow)">
+              <text id="flowLabel" x="520" y="625" font-size="30">Q = 30.00 L/min</text>
+            </g>
+
+            <g font-weight="900" filter="url(#labelShadow)">
+              <text id="materialLabel" x="320" y="590" font-size="22" fill="#ffffff">Material: PVC (nuevo)</text>
+            </g>
+
+            <g fill="#ffffff" font-weight="900" filter="url(#labelShadow)">
+              <line id="dzLine" x1="845" y1="380" x2="845" y2="205" stroke="#ffffff" stroke-width="3.5"/>
+              <polygon id="dzArrowTop" points="837,215 845,195 853,215" fill="#ffffff"/>
+              <polygon id="dzArrowBot" points="837,370 845,390 853,370" fill="#ffffff"/>
+              <text id="dzLabel" x="760" y="300" font-size="34">Δz = 8.00 m</text>
+            </g>
+          </svg>
+        </div>
+
+        <details class="formulas">
+          <summary>
+            <span>Ecuaciones</span>
+            <span class="arrow"></span>
+          </summary>
+          <div class="formula-body">
+            <div class="eq">A = πD² / 4</div>
+            <div class="eq">V = Q / A</div>
+            <div class="eq">Nr = (ρVD) / μ</div>
+            <div class="eq">f = 0.25 / [log10((ε/3.7D) + (5.74/Nr^0.9))]²</div>
+            <div class="eq">HL<sub>fricción</sub> = f (L/D) (V² / 2g)</div>
+            <div class="eq">K = (L<sub>e</sub>/D) f<sub>t</sub></div>
+            <div class="eq">hL<sub>menor</sub> = K (V² / 2g)</div>
+            <div class="eq">HA = Δz + HL<sub>fricción</sub> + hL<sub>menor,total</sub></div>
+            <div class="eq">P<sub>hid</sub> = ρgHAQ</div>
+            <div class="eq">P<sub>req</sub> = P<sub>hid</sub> / η</div>
+            <div class="small-note">Para flujo laminar: f = 64/Nr. En pérdidas menores, para acero comercial se usa f<sub>t</sub> según tabla 10.5; en otros materiales se usa el factor de fricción calculado arriba.</div>
+          </div>
+        </details>
+      </div>
+
+      <div class="panel">
+        <div class="panel-inner">
+          <h2>Resultados</h2>
+          <p class="muted">Salidas calculadas con ecuaciones de clase.</p>
+
+          <div class="results">
+            <div class="result">
+              <div class="name">Área A</div>
+              <div class="value" id="outArea">-</div>
+            </div>
+
+            <div class="result">
+              <div class="name">Velocidad V</div>
+              <div class="value" id="outVelocity">-</div>
+            </div>
+
+            <div class="result">
+              <div class="name">Nr (Reynolds)</div>
+              <div class="value" id="outRe">-</div>
+            </div>
+
+            <div class="result">
+              <div class="name">Factor de fricción f</div>
+              <div class="value" id="outF">-</div>
+            </div>
+
+            <div class="result">
+              <div class="name">HL fricción</div>
+              <div class="value" id="outHL">-</div>
+            </div>
+
+            <div class="result minor-only" id="minorResultFtCard">
+              <div class="name">f<sub>t</sub> usado en pérdidas menores</div>
+              <div class="value" id="outFtMinor">-</div>
+            </div>
+
+            <div class="result minor-only" id="minorResultKCard">
+              <div class="name">K total pérdidas menores</div>
+              <div class="value" id="outKMinor">-</div>
+            </div>
+
+            <div class="result minor-only" id="minorResultHLCard">
+              <div class="name">hL pérdidas menores</div>
+              <div class="value" id="outHLMinor">-</div>
+            </div>
+
+            <div class="result">
+              <div class="name">HA total</div>
+              <div class="value" id="outHA">-</div>
+            </div>
+
+            <div class="result highlight">
+              <div class="name">Potencia hidráulica</div>
+              <div class="value" id="outPh">-</div>
+              <div class="subvalue" id="outPhHp">-</div>
+            </div>
+
+            <div class="result highlight">
+              <div class="name">Potencia requerida</div>
+              <div class="value" id="outPreq">-</div>
+              <div class="subvalue" id="outPreqHp">-</div>
+            </div>
+
+            <div class="result">
+              <div class="name">Rugosidad ε</div>
+              <div class="value" id="outEps">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <template id="accessoryTemplate">
+    <div class="accessory-item">
+      <div class="input-row accessory-row">
+        <select class="acc-type"></select>
+        <input class="acc-qty" type="number" min="1" step="1" value="1">
+        <button class="btn danger small acc-remove" type="button">✕</button>
+      </div>
+      <div class="accessory-meta acc-meta">-</div>
+    </div>
+  </template>
+
+  <script>
+    const g = 9.81;
+    const W_PER_HP = 745.699872;
+
+    const minorAccessories = [
+      { key:"globe_open", name:"Válvula de globo — totalmente abierta", mode:"LeD", value:340 },
+      { key:"angle_open", name:"Válvula de ángulo — totalmente abierta", mode:"LeD", value:150 },
+      { key:"gate_open", name:"Válvula de compuerta — totalmente abierta", mode:"LeD", value:8 },
+      { key:"gate_3_4", name:"Válvula de compuerta — abierta 3/4", mode:"LeD", value:35 },
+      { key:"gate_1_2", name:"Válvula de compuerta — abierta 1/2", mode:"LeD", value:160 },
+      { key:"gate_1_4", name:"Válvula de compuerta — abierta 1/4", mode:"LeD", value:900 },
+      { key:"check_swing", name:"Válvula de retención — tipo oscilante", mode:"LeD", value:100 },
+      { key:"check_ball", name:"Válvula de retención — tipo bola", mode:"LeD", value:150 },
+      { key:"butterfly_2_8", name:"Válvula de mariposa — totalmente abierta, 2-8 in", mode:"LeD", value:45 },
+      { key:"butterfly_10_14", name:"Válvula de mariposa — totalmente abierta, 10-14 in", mode:"LeD", value:35 },
+      { key:"butterfly_16_24", name:"Válvula de mariposa — totalmente abierta, 16-24 in", mode:"LeD", value:25 },
+      { key:"foot_stem_disk", name:"Válvula de pie — tipo disco de vástago", mode:"LeD", value:420 },
+      { key:"foot_hinged_disk", name:"Válvula de pie — tipo disco de bisagras", mode:"LeD", value:75 },
+      { key:"elbow90_std", name:"Codo estándar de 90°", mode:"LeD", value:30 },
+      { key:"elbow90_long", name:"Codo de 90° y radio largo", mode:"LeD", value:20 },
+      { key:"elbow90_street", name:"Codo de 90° para calle", mode:"LeD", value:50 },
+      { key:"elbow45_std", name:"Codo estándar de 45°", mode:"LeD", value:16 },
+      { key:"elbow45_street", name:"Codo de 45° para calle", mode:"LeD", value:26 },
+      { key:"return_bend_closed", name:"Doblez de retorno cerrado", mode:"LeD", value:50 },
+      { key:"tee_main", name:"Te estándar — con flujo por la línea principal", mode:"LeD", value:20 },
+      { key:"tee_branch", name:"Te estándar — con flujo por la ramificación", mode:"LeD", value:60 },
+
+      { key:"entry_projecting", name:"Entrada — tubería que se proyecta hacia adentro", mode:"K", value:1.0 },
+      { key:"entry_sharp", name:"Entrada — bordes afilados", mode:"K", value:0.5 },
+      { key:"entry_chamfered", name:"Entrada — achaflanada", mode:"K", value:0.25 },
+      { key:"entry_rounded_0", name:"Entrada redondeada — r/D = 0", mode:"K", value:0.50 },
+      { key:"entry_rounded_002", name:"Entrada redondeada — r/D = 0.02", mode:"K", value:0.28 },
+      { key:"entry_rounded_004", name:"Entrada redondeada — r/D = 0.04", mode:"K", value:0.24 },
+      { key:"entry_rounded_006", name:"Entrada redondeada — r/D = 0.06", mode:"K", value:0.15 },
+      { key:"entry_rounded_010", name:"Entrada redondeada — r/D = 0.10", mode:"K", value:0.09 },
+      { key:"entry_rounded_gt015", name:"Entrada redondeada — r/D > 0.15", mode:"K", value:0.04 }
+    ];
+
+    const materials = {
+      pvc_new: { name:"PVC (nuevo)", eps:1.5e-6, pipeColor:"#2f6df6", pipeGlow:"#84c5ff" },
+      pvc_used: { name:"PVC (usado)", eps:7e-6, pipeColor:"#3f7cff", pipeGlow:"#a2ceff" },
+      copper: { name:"Cobre", eps:1.5e-6, pipeColor:"#c47a3a", pipeGlow:"#e3b184" },
+      steel_commercial: { name:"Acero comercial", eps:4.6e-5, pipeColor:"#7b8a96", pipeGlow:"#b7c2ca" },
+      steel_galvanized: { name:"Acero galvanizado", eps:1.5e-4, pipeColor:"#8e989f", pipeGlow:"#cad2d7" },
+      cast_iron: { name:"Hierro fundido", eps:2.6e-4, pipeColor:"#5d646b", pipeGlow:"#9fa6ad" },
+      concrete_smooth: { name:"Concreto liso", eps:3e-4, pipeColor:"#8f9288", pipeGlow:"#c0c2b7" },
+      concrete_rough: { name:"Concreto rugoso", eps:3e-3, pipeColor:"#7a7568", pipeGlow:"#b8b29f" }
+    };
+
+    const $ = id => document.getElementById(id);
+
+    const inputs = {
+      flowValue: $("flowValue"),
+      flowUnit: $("flowUnit"),
+      diameterValue: $("diameterValue"),
+      diameterUnit: $("diameterUnit"),
+      lengthValue: $("lengthValue"),
+      lengthUnit: $("lengthUnit"),
+      elevationValue: $("elevationValue"),
+      elevationUnit: $("elevationUnit"),
+      material: $("material"),
+      density: $("density"),
+      viscosity: $("viscosity"),
+      efficiency: $("efficiency"),
+      materialInfo: $("materialInfo"),
+      btnSample: $("btnSample"),
+      btnReset: $("btnReset"),
+      enableMinorLosses: $("enableMinorLosses"),
+      minorBox: $("minorBox"),
+      minorModeInfo: $("minorModeInfo"),
+      accessoryList: $("accessoryList"),
+      btnAddAccessory: $("btnAddAccessory"),
+      btnClearAccessories: $("btnClearAccessories"),
+      accessoryTemplate: $("accessoryTemplate")
+    };
+
+    const outputs = {
+      outArea: $("outArea"),
+      outVelocity: $("outVelocity"),
+      outRe: $("outRe"),
+      outF: $("outF"),
+      outHL: $("outHL"),
+      outHA: $("outHA"),
+      outPh: $("outPh"),
+      outPhHp: $("outPhHp"),
+      outPreq: $("outPreq"),
+      outPreqHp: $("outPreqHp"),
+      outEps: $("outEps"),
+      outFtMinor: $("outFtMinor"),
+      outKMinor: $("outKMinor"),
+      outHLMinor: $("outHLMinor"),
+      minorResultFtCard: $("minorResultFtCard"),
+      minorResultKCard: $("minorResultKCard"),
+      minorResultHLCard: $("minorResultHLCard")
+    };
+
+    const diagram = {
+      pipeMain: $("pipeMain"),
+      pipeGlowPath: $("pipeGlowPath"),
+      pipeTank: $("pipeTank"),
+      pipeTankGlow: $("pipeTankGlow"),
+      lengthLabel: $("lengthLabel"),
+      diamLabel: $("diamLabel"),
+      flowLabel: $("flowLabel"),
+      dzLabel: $("dzLabel"),
+      dzLine: $("dzLine"),
+      dzArrowTop: $("dzArrowTop"),
+      dzArrowBot: $("dzArrowBot"),
+      materialLabel: $("materialLabel"),
+      tankBody: $("tankBody"),
+      tankWater: $("tankWater"),
+      tankTop: $("tankTop"),
+      leg1: $("leg1"),
+      leg2: $("leg2"),
+      bar1: $("bar1"),
+      bar2: $("bar2"),
+      cross1: $("cross1"),
+      cross2: $("cross2")
+    };
+
+    function num(el){
+      return parseFloat(el.value);
+    }
+
+    function toM3s(value, unit){
+      switch(unit){
+        case "L/min": return value / 1000 / 60;
+        case "gal/min": return value * 0.003785411784 / 60;
+        case "m3/s": return value;
+        case "m3/min": return value / 60;
+        case "ft3/s": return value * 0.028316846592;
+        default: return value;
+      }
+    }
+
+    function toMeters(value, unit){
+      switch(unit){
+        case "m": return value;
+        case "ft": return value * 0.3048;
+        case "cm": return value / 100;
+        case "mm": return value / 1000;
+        case "in": return value * 0.0254;
+        default: return value;
+      }
+    }
+
+    function toInches(value, unit){
+      return toMeters(value, unit) / 0.0254;
+    }
+
+    function trimZeros(str){
+      return str.replace(/(\.\d*?[1-9])0+$/,"$1").replace(/\.0+$/,"");
+    }
+
+    function sciHTML(num, sig=4, unit=""){
+      if(!Number.isFinite(num)) return "-";
+      if(num === 0) return `0 ${unit}`.trim();
+      const abs = Math.abs(num);
+      if(abs >= 0.001 && abs < 10000){
+        return `${trimZeros(num.toFixed(sig))} ${unit}`.trim();
+      }
+      const exp = Math.floor(Math.log10(abs));
+      const mant = num / Math.pow(10, exp);
+      return `${trimZeros(mant.toFixed(sig))} x10<sup>${exp}</sup> ${unit}`.trim();
+    }
+
+    function fmt(num, unit="", fixed=4){
+      if(!Number.isFinite(num)) return "-";
+      const abs = Math.abs(num);
+      if((abs !== 0 && abs < 0.001) || abs >= 10000){
+        return sciHTML(num, 4, unit);
+      }
+      return `${trimZeros(num.toFixed(fixed))} ${unit}`.trim();
+    }
+
+    function formatInteger(num){
+      if(!Number.isFinite(num)) return "-";
+      return Math.round(num).toLocaleString("en-US");
+    }
+
+    function clamp(v, min, max){
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function getSteelFtFromInches(dIn){
+      if (dIn <= 0.5) return 0.026;
+      if (dIn <= 0.75) return 0.024;
+      if (dIn <= 1.0) return 0.022;
+      if (dIn <= 1.25) return 0.021;
+      if (dIn <= 1.5) return 0.020;
+      if (dIn <= 2.0) return 0.019;
+      if (dIn <= 2.5) return 0.018;
+      if (dIn <= 3.5) return 0.017;
+      if (dIn <= 4.0) return 0.016;
+      if (dIn <= 6.0) return 0.015;
+      if (dIn <= 8.0) return 0.014;
+      if (dIn <= 14.0) return 0.013;
+      if (dIn <= 22.0) return 0.012;
+      return 0.011;
+    }
+
+    function getMinorFt(materialKey, dIn, f){
+      if(materialKey === "steel_commercial"){
+        return getSteelFtFromInches(dIn);
+      }
+      return f;
+    }
+
+    function populateAccessorySelect(selectEl){
+      selectEl.innerHTML = "";
+      minorAccessories.forEach(acc=>{
+        const opt = document.createElement("option");
+        opt.value = acc.key;
+        opt.textContent = acc.name;
+        selectEl.appendChild(opt);
+      });
+    }
+
+    function getAccessoryByKey(key){
+      return minorAccessories.find(a => a.key === key);
+    }
+
+    function updateMinorVisibility(){
+      const active = inputs.enableMinorLosses.checked;
+      inputs.minorBox.classList.toggle("active", active);
+      [
+        outputs.minorResultFtCard,
+        outputs.minorResultKCard,
+        outputs.minorResultHLCard
+      ].forEach(card => card.classList.toggle("active", active));
+      updateMinorInfoText();
+    }
+
+    function updateMinorInfoText(){
+      if(!inputs.enableMinorLosses.checked){
+        inputs.minorModeInfo.innerHTML = "Desactivado.";
+        return;
+      }
+      const count = inputs.accessoryList.children.length;
+      if(count === 0){
+        inputs.minorModeInfo.innerHTML = "Activado. Agrega uno o varios accesorios o entradas especiales.";
+      }else{
+        inputs.minorModeInfo.innerHTML = `Activado. Accesorios agregados: <strong>${count}</strong>.`;
+      }
+    }
+
+    function addAccessoryRow(defaultKey = "elbow90_std", qty = 1){
+      const node = inputs.accessoryTemplate.content.firstElementChild.cloneNode(true);
+      const select = node.querySelector(".acc-type");
+      const qtyInput = node.querySelector(".acc-qty");
+      const removeBtn = node.querySelector(".acc-remove");
+
+      populateAccessorySelect(select);
+      select.value = defaultKey;
+      qtyInput.value = qty;
+
+      select.addEventListener("change", ()=>{
+        updateAccessoryMeta(node);
+        compute();
+      });
+      qtyInput.addEventListener("input", ()=>{
+        updateAccessoryMeta(node);
+        compute();
+      });
+      removeBtn.addEventListener("click", ()=>{
+        node.remove();
+        updateMinorInfoText();
+        compute();
+      });
+
+      inputs.accessoryList.appendChild(node);
+      updateAccessoryMeta(node);
+      updateMinorInfoText();
+    }
+
+    function updateAccessoryMeta(node){
+      const select = node.querySelector(".acc-type");
+      const qtyInput = node.querySelector(".acc-qty");
+      const meta = node.querySelector(".acc-meta");
+      const acc = getAccessoryByKey(select.value);
+      const qty = Math.max(1, parseInt(qtyInput.value || "1", 10));
+
+      if(!acc){
+        meta.textContent = "-";
+        return;
+      }
+
+      if(acc.mode === "LeD"){
+        meta.innerHTML = `Tipo: Le/D · Valor: <strong>${acc.value}</strong> · Cantidad: <strong>${qty}</strong>`;
+      }else{
+        meta.innerHTML = `Tipo: K directo · Valor: <strong>${trimZeros(acc.value.toFixed(2))}</strong> · Cantidad: <strong>${qty}</strong>`;
+      }
+    }
+
+    function clearAccessories(){
+      inputs.accessoryList.innerHTML = "";
+      updateMinorInfoText();
+      compute();
+    }
+
+    function getMinorLossSummary(D, V, f, materialKey){
+      if(!inputs.enableMinorLosses.checked){
+        return {
+          enabled:false,
+          ftMinor:0,
+          kTotal:0,
+          hLMinor:0,
+          items:[]
+        };
+      }
+
+      const dIn = D / 0.0254;
+      const ftMinor = getMinorFt(materialKey, dIn, f);
+      let kTotal = 0;
+      const items = [];
+
+      [...inputs.accessoryList.children].forEach(node=>{
+        const select = node.querySelector(".acc-type");
+        const qtyInput = node.querySelector(".acc-qty");
+        const acc = getAccessoryByKey(select.value);
+        const qty = Math.max(1, parseInt(qtyInput.value || "1", 10));
+
+        if(!acc) return;
+
+        let kUnit = 0;
+        if(acc.mode === "LeD"){
+          kUnit = acc.value * ftMinor;
+        }else{
+          kUnit = acc.value;
+        }
+
+        const kItem = kUnit * qty;
+        kTotal += kItem;
+
+        items.push({
+          name: acc.name,
+          qty,
+          kUnit,
+          kItem,
+          mode: acc.mode,
+          refValue: acc.value
+        });
+      });
+
+      const hLMinor = kTotal * (V * V / (2 * g));
+
+      return {
+        enabled:true,
+        ftMinor,
+        kTotal,
+        hLMinor,
+        items
+      };
+    }
+
+    function compute(){
+      const Qinput = Math.max(0, num(inputs.flowValue));
+      const Dinput = Math.max(0, num(inputs.diameterValue));
+      const Linput = Math.max(0, num(inputs.lengthValue));
+      const dzInput = Math.max(0, num(inputs.elevationValue));
+      const rho = Math.max(0.000001, num(inputs.density));
+      const mu = Math.max(1e-10, num(inputs.viscosity));
+      const etaPercent = Math.max(0.0001, num(inputs.efficiency));
+      const eta = etaPercent / 100;
+      const mat = materials[inputs.material.value];
+
+      const Q = toM3s(Qinput, inputs.flowUnit.value);
+      const D = toMeters(Dinput, inputs.diameterUnit.value);
+      const L = toMeters(Linput, inputs.lengthUnit.value);
+      const dz = toMeters(dzInput, inputs.elevationUnit.value);
+      const eps = mat.eps;
+
+      let A = 0;
+      let V = 0;
+      let Re = 0;
+      let f = 0;
+      let HL = 0;
+      let hLMinor = 0;
+      let kMinor = 0;
+      let ftMinor = 0;
+      let HA = 0;
+      let gamma = rho * g;
+      let Ph = 0;
+      let Preq = 0;
+
+      if(D > 0){
+        A = Math.PI * D * D / 4;
+      }
+
+      if(A > 0){
+        V = Q / A;
+      }
+
+      if(D > 0 && mu > 0){
+        Re = (rho * V * D) / mu;
+      }
+
+      if(Re > 0){
+        if(Re < 2000){
+          f = 64 / Re;
+        }else{
+          const term = (eps / (3.7 * D)) + (5.74 / Math.pow(Re, 0.9));
+          f = 0.25 / Math.pow(Math.log10(term), 2);
+        }
+      }
+
+      if(D > 0){
+        HL = f * (L / D) * (V * V / (2 * g));
+      }
+
+      const minorSummary = getMinorLossSummary(D, V, f, inputs.material.value);
+      hLMinor = minorSummary.hLMinor;
+      kMinor = minorSummary.kTotal;
+      ftMinor = minorSummary.ftMinor;
+
+      HA = dz + HL + hLMinor;
+      Ph = gamma * HA * Q;
+      Preq = Ph / eta;
+
+      render({
+        Qinput, Dinput, Linput, dzInput,
+        Q, D, L, dz, rho, mu, etaPercent, eta, eps,
+        A, V, Re, f, HL, HA, gamma, Ph, Preq,
+        materialName: mat.name,
+        pipeColor: mat.pipeColor,
+        pipeGlow: mat.pipeGlow,
+        minorEnabled: minorSummary.enabled,
+        ftMinor,
+        kMinor,
+        hLMinor
+      });
+    }
+
+    function render(data){
+      inputs.materialInfo.innerHTML = `
+        <strong>${data.materialName}</strong><br>
+        Rugosidad ε = ${sciHTML(data.eps, 4, "m")}
+      `;
+
+      outputs.outArea.innerHTML = fmt(data.A, "m²", 6);
+      outputs.outVelocity.innerHTML = fmt(data.V, "m/s", 4);
+      outputs.outRe.innerHTML = formatInteger(data.Re);
+      outputs.outF.innerHTML = fmt(data.f, "", 5);
+      outputs.outHL.innerHTML = fmt(data.HL, "m", 4);
+      outputs.outHA.innerHTML = fmt(data.HA, "m", 4);
+      outputs.outPh.innerHTML = fmt(data.Ph, "W", 4);
+      outputs.outPhHp.innerHTML = fmt(data.Ph / W_PER_HP, "HP", 4);
+      outputs.outPreq.innerHTML = fmt(data.Preq, "W", 4);
+      outputs.outPreqHp.innerHTML = fmt(data.Preq / W_PER_HP, "HP", 4);
+      outputs.outEps.innerHTML = sciHTML(data.eps, 4, "m");
+
+      if(data.minorEnabled){
+        outputs.outFtMinor.innerHTML = fmt(data.ftMinor, "", 5);
+        outputs.outKMinor.innerHTML = fmt(data.kMinor, "", 4);
+        outputs.outHLMinor.innerHTML = fmt(data.hLMinor, "m", 4);
+      }else{
+        outputs.outFtMinor.innerHTML = "-";
+        outputs.outKMinor.innerHTML = "-";
+        outputs.outHLMinor.innerHTML = "-";
+      }
+
+      diagram.lengthLabel.textContent = `L = ${trimZeros(data.L.toFixed(2))} m`;
+      diagram.diamLabel.textContent = `D = ${trimZeros(data.D.toFixed(4))} m`;
+      diagram.flowLabel.textContent = `Q = ${trimZeros(data.Qinput.toFixed(2))} ${inputs.flowUnit.value}`;
+      diagram.dzLabel.textContent = `Δz = ${trimZeros(data.dz.toFixed(2))} m`;
+      diagram.materialLabel.textContent = `Material: ${data.materialName}`;
+
+      document.documentElement.style.setProperty("--pipeColor", data.pipeColor);
+      document.documentElement.style.setProperty("--pipeGlow", data.pipeGlow);
+
+      updateDiagram(data);
+      updateMinorVisibility();
+    }
+
+    function updateDiagram(data){
+      const groundY = 380;
+      const basePipeY = 430;
+      const topMin = 205;
+      const topMax = 315;
+
+      const verticalTopY = clamp(basePipeY - (data.dz * 22), topMin, topMax);
+
+      const mainPath =
+        `M 220 542
+         L 220 488
+         L 220 448
+         L 220 430
+         L 265 430
+         L 280 430
+         L 460 430
+         L 460 ${verticalTopY}
+         L 455 ${verticalTopY}`;
+
+      const towerTop = Math.max(verticalTopY - 45, 190);
+
+      const tankPath =
+        `M 455 ${verticalTopY}
+         L 455 ${towerTop}
+         L 430 ${towerTop}`;
+
+      diagram.pipeMain.setAttribute("d", mainPath);
+      diagram.pipeGlowPath.setAttribute("d", mainPath);
+      diagram.pipeTank.setAttribute("d", tankPath);
+      diagram.pipeTankGlow.setAttribute("d", tankPath);
+
+      diagram.leg1.setAttribute("y1", String(towerTop));
+      diagram.leg2.setAttribute("y1", String(towerTop));
+      diagram.bar1.setAttribute("y1", String(towerTop));
+      diagram.bar1.setAttribute("y2", String(towerTop));
+      diagram.cross1.setAttribute("y1", String(towerTop));
+      diagram.cross2.setAttribute("y1", String(towerTop));
+
+      diagram.tankBody.setAttribute("y", String(towerTop - 85));
+      diagram.tankWater.setAttribute("y", String(towerTop - 59));
+      diagram.tankTop.setAttribute("cy", String(towerTop - 85));
+
+      diagram.dzLine.setAttribute("x1", "845");
+      diagram.dzLine.setAttribute("y1", String(groundY));
+      diagram.dzLine.setAttribute("x2", "845");
+      diagram.dzLine.setAttribute("y2", String(towerTop));
+
+      diagram.dzArrowTop.setAttribute(
+        "points",
+        `837,${towerTop + 10} 845,${towerTop - 10} 853,${towerTop + 10}`
+      );
+      diagram.dzArrowBot.setAttribute(
+        "points",
+        `837,${groundY - 10} 845,${groundY + 10} 853,${groundY - 10}`
+      );
+
+      const textY = ((groundY + towerTop) / 2) + 8;
+      diagram.dzLabel.setAttribute("x", "720");
+      diagram.dzLabel.setAttribute("y", String(textY));
+
+      let fz = 34;
+      if(data.dz >= 12) fz = 30;
+      if(data.dz >= 18) fz = 26;
+      diagram.dzLabel.setAttribute("font-size", String(fz));
+    }
+
+    function loadBase(){
+      inputs.flowValue.value = 30;
+      inputs.flowUnit.value = "L/min";
+      inputs.diameterValue.value = 1;
+      inputs.diameterUnit.value = "in";
+      inputs.lengthValue.value = 25;
+      inputs.lengthUnit.value = "m";
+      inputs.elevationValue.value = 8;
+      inputs.elevationUnit.value = "m";
+      inputs.material.value = "pvc_new";
+      inputs.density.value = 1000;
+      inputs.viscosity.value = 0.001;
+      inputs.efficiency.value = 60;
+      inputs.enableMinorLosses.checked = false;
+      clearAccessories();
+      compute();
+    }
+
+    function resetAll(){
+      loadBase();
+    }
+
+    [
+      inputs.flowValue, inputs.flowUnit,
+      inputs.diameterValue, inputs.diameterUnit,
+      inputs.lengthValue, inputs.lengthUnit,
+      inputs.elevationValue, inputs.elevationUnit,
+      inputs.material, inputs.density, inputs.viscosity, inputs.efficiency
+    ].forEach(el=>{
+      el.addEventListener("input", compute);
+      el.addEventListener("change", compute);
+    });
+
+    inputs.enableMinorLosses.addEventListener("change", ()=>{
+      updateMinorVisibility();
+      compute();
+    });
+
+    inputs.btnAddAccessory.addEventListener("click", ()=>{
+      addAccessoryRow();
+      compute();
+    });
+
+    inputs.btnClearAccessories.addEventListener("click", clearAccessories);
+
+    inputs.btnSample.addEventListener("click", loadBase);
+    inputs.btnReset.addEventListener("click", resetAll);
+
+    loadBase();
+  </script>
+</body>
+</html>
